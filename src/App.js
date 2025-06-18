@@ -1,220 +1,202 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { Car } from './components/Car';
 import './App.css';
-import Scene from './components/Scene';
-import Joystick from './components/Joystick';
-import About from './components/About';
+
+// Miramar desert map component
+function World() {
+  return (
+    <>
+      {/* Lighting - bright desert sun */}
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[0, 10, 0]} intensity={1.5} color="#fff5e0" castShadow />
+      <fog attach="fog" args={["#ffe6cc", 30, 100]} />
+      
+      {/* Desert ground with terrain variations */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
+        <planeGeometry args={[200, 200, 50, 50]} />
+        <meshStandardMaterial color="#e6c588" displacementScale={2} wireframe={false} />
+      </mesh>
+      
+      
+      
+      {/* Mountains */}
+      <group>
+        {/* Large mountain range */}
+        <mesh position={[-40, 15, -60]} castShadow>
+          <coneGeometry args={[30, 40, 4]} />
+          <meshStandardMaterial color="#c19a6b" />
+        </mesh>
+        
+        <mesh position={[-20, 10, -50]} castShadow>
+          <coneGeometry args={[20, 25, 4]} />
+          <meshStandardMaterial color="#d2b48c" />
+        </mesh>
+        
+        <mesh position={[30, 12, -55]} castShadow>
+          <coneGeometry args={[25, 30, 4]} />
+          <meshStandardMaterial color="#c19a6b" />
+        </mesh>
+        
+        {/* Additional mountains */}
+        <mesh position={[50, 8, -40]} castShadow>
+          <coneGeometry args={[15, 20, 4]} />
+          <meshStandardMaterial color="#b38867" />
+        </mesh>
+        
+        <mesh position={[-60, 10, -30]} castShadow>
+          <coneGeometry args={[18, 22, 4]} />
+          <meshStandardMaterial color="#c2a284" />
+        </mesh>
+      </group>
+      
+      {/* Desert buildings - Hacienda-like compound */}
+      <group position={[0, 0, 10]}>
+        {/* Main building */}
+        <mesh position={[0, 2, 0]} castShadow>
+          <boxGeometry args={[8, 4, 10]} />
+          <meshStandardMaterial color="#d9c8b4" />
+        </mesh>
+        
+        {/* Roof */}
+        <mesh position={[0, 4.5, 0]} castShadow>
+          <boxGeometry args={[9, 1, 11]} />
+          <meshStandardMaterial color="#a86f32" />
+        </mesh>
+        
+        {/* Smaller buildings */}
+        <mesh position={[-10, 1, 5]} castShadow>
+          <boxGeometry args={[5, 2, 5]} />
+          <meshStandardMaterial color="#c2b280" />
+        </mesh>
+        
+        <mesh position={[8, 1.5, -8]} castShadow>
+          <boxGeometry args={[4, 3, 6]} />
+          <meshStandardMaterial color="#d9c8b4" />
+        </mesh>
+        
+        {/* Walls */}
+        <mesh position={[-5, 1, -5]} castShadow>
+          <boxGeometry args={[20, 2, 0.5]} />
+          <meshStandardMaterial color="#e8d9c0" />
+        </mesh>
+        
+        <mesh position={[-5, 1, 15]} castShadow>
+          <boxGeometry args={[20, 2, 0.5]} />
+          <meshStandardMaterial color="#e8d9c0" />
+        </mesh>
+        
+
+        
+      </group>
+      
+      
+      {/* Desert rocks */}
+      {[[5, 0, -5], [-8, 0, 8], [15, 0, 5], [-12, 0, -15], [30, 0, -20], [-20, 0, -25], [25, 0, 15]].map((position, index) => (
+        <mesh key={`rock-${index}`} position={position} castShadow>
+          <dodecahedronGeometry args={[1 + Math.random() * 1.5, 0]} />
+          <meshStandardMaterial color="#a89078" />
+        </mesh>
+      ))}
+      
+      {/* Road */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]} receiveShadow>
+        <planeGeometry args={[6, 100]} />
+        <meshStandardMaterial color="#847c74" />
+      </mesh>
+      
+      
+      {/* Oasis */}
+      <group position={[30, 0, 30]}>
+       
+        
+        {/* Palm trees */}
+        {[[2, 0, 2], [-3, 0, 1], [0, 0, -3]].map((pos, idx) => (
+          <group key={`palm-${idx}`} position={[pos[0] + 30, pos[1], pos[2] + 30]}>
+            <mesh position={[0, 3, 0]} castShadow>
+              <cylinderGeometry args={[0.3, 0.5, 6, 8]} />
+              <meshStandardMaterial color="#8b5a2b" />
+            </mesh>
+            <mesh position={[0, 6, 0]} castShadow>
+              <coneGeometry args={[2, 1, 8]} />
+              <meshStandardMaterial color="#2e8b57" />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    </>
+  );
+}
 
 function App() {
-  // Position car at the starting line
-  const [carPosition, setCarPosition] = useState([0, 0, 25]);
-  const [carRotation, setCarRotation] = useState([0, 0, 0]); // Start facing forward (Z-negative)
-  const [movement, setMovement] = useState({ x: 0, z: 0 });
-  const [isMoving, setIsMoving] = useState(false);
-  const [perspective, setPerspective] = useState('third-person');
-  const [keyboardControls, setKeyboardControls] = useState({
-    forward: false,
-    backward: false,
-    left: false,
-    right: false
-  });
+  const [carPosition, setCarPosition] = useState([0, 0, 0]);
+  const [carRotation, setCarRotation] = useState([0, 0, 0]);
   
-  // Speed reference for smooth movement
-  const speedRef = useRef(0);
-
-  // Handle joystick movement
-  const handleJoystickMove = (data) => {
-    // Only set movement if there's actual input
-    if (Math.abs(data.x) > 0.05 || Math.abs(data.z) > 0.05) {
-      setMovement(data);
-      setIsMoving(true);
-      
-      // For joystick, we want to directly control the car's rotation
-      // based on the joystick direction - invert Z for correct orientation
-      const angle = Math.atan2(data.x, -data.z);
-      setCarRotation([0, angle, 0]);
-    }
-  };
-
-  // Handle joystick release
-  const handleJoystickEnd = () => {
-    setIsMoving(false);
-    setMovement({ x: 0, z: 0 });
-    // Reset speed when joystick is released
-    speedRef.current = 0;
-  };
-
-  // Handle keyboard controls
+  // Add keyboard controls for the car
   useEffect(() => {
+    const speed = 0.2;
+    const rotationSpeed = 0.05;
+    const keysPressed = {};
+    
     const handleKeyDown = (e) => {
-      switch(e.key) {
-        case 'ArrowUp':
-        case 'w':
-          setKeyboardControls(prev => ({ ...prev, forward: true }));
-          setIsMoving(true);
-          break;
-        case 'ArrowDown':
-        case 's':
-          setKeyboardControls(prev => ({ ...prev, backward: true }));
-          setIsMoving(true);
-          break;
-        case 'ArrowLeft':
-        case 'a':
-          setKeyboardControls(prev => ({ ...prev, left: true }));
-          break;
-        case 'ArrowRight':
-        case 'd':
-          setKeyboardControls(prev => ({ ...prev, right: true }));
-          break;
-        default:
-          break;
-      }
+      keysPressed[e.key.toLowerCase()] = true;
     };
-
+    
     const handleKeyUp = (e) => {
-      switch(e.key) {
-        case 'ArrowUp':
-        case 'w':
-          setKeyboardControls(prev => {
-            const newControls = { ...prev, forward: false };
-            if (!newControls.backward) setIsMoving(false);
-            return newControls;
-          });
-          break;
-        case 'ArrowDown':
-        case 's':
-          setKeyboardControls(prev => {
-            const newControls = { ...prev, backward: false };
-            if (!newControls.forward) setIsMoving(false);
-            return newControls;
-          });
-          break;
-        case 'ArrowLeft':
-        case 'a':
-          setKeyboardControls(prev => ({ ...prev, left: false }));
-          break;
-        case 'ArrowRight':
-        case 'd':
-          setKeyboardControls(prev => ({ ...prev, right: false }));
-          break;
-        default:
-          break;
+      keysPressed[e.key.toLowerCase()] = false;
+    };
+    
+    const updateCarPosition = () => {
+      // Rotation
+      if (keysPressed['a'] || keysPressed['arrowleft']) {
+        setCarRotation(prev => [prev[0], prev[1] + rotationSpeed, prev[2]]);
+      }
+      if (keysPressed['d'] || keysPressed['arrowright']) {
+        setCarRotation(prev => [prev[0], prev[1] - rotationSpeed, prev[2]]);
+      }
+      
+      // Movement
+      if (keysPressed['w'] || keysPressed['arrowup']) {
+        setCarPosition(prev => {
+          const moveX = Math.sin(carRotation[1]) * speed;
+          const moveZ = -Math.cos(carRotation[1]) * speed;
+          return [prev[0] + moveX, prev[1], prev[2] + moveZ];
+        });
+      }
+      if (keysPressed['s'] || keysPressed['arrowdown']) {
+        setCarPosition(prev => {
+          const moveX = -Math.sin(carRotation[1]) * speed;
+          const moveZ = Math.cos(carRotation[1]) * speed;
+          return [prev[0] + moveX, prev[1], prev[2] + moveZ];
+        });
       }
     };
-
+    
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-
+    
+    const interval = setInterval(updateCarPosition, 16);
+    
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      clearInterval(interval);
     };
-  }, []);
-
-  // Update movement based on keyboard controls
-  useEffect(() => {
-    if (keyboardControls.forward || keyboardControls.backward || keyboardControls.left || keyboardControls.right) {
-      const forwardValue = keyboardControls.forward ? 1 : (keyboardControls.backward ? -1 : 0);
-      
-      // Update car rotation directly when turning
-      if (keyboardControls.left) {
-        setCarRotation(prev => [prev[0], prev[1] + 0.05, prev[2]]);
-      }
-      if (keyboardControls.right) {
-        setCarRotation(prev => [prev[0], prev[1] - 0.05, prev[2]]);
-      }
-      
-      // Set movement for forward/backward
-      if (forwardValue !== 0) {
-        setMovement({ x: 0, z: forwardValue });
-        setIsMoving(true);
-      } else if (!keyboardControls.forward && !keyboardControls.backward && isMoving) {
-        // Stop movement if no forward/backward keys are pressed
-        setMovement({ x: 0, z: 0 });
-        setIsMoving(false);
-      }
-    }
-  }, [keyboardControls, isMoving]);
-
-  // Update car position based on joystick/keyboard input with smooth movement and track boundaries
-  useEffect(() => {
-    if (!isMoving) return;
-
-    const maxSpeed = 0.3; // Maximum speed
-    const acceleration = 0.1; // Increased acceleration for more responsive movement
-    const deceleration = 0.05; // How quickly the car slows down
-    
-    // Track boundaries
-    const trackOuterRadius = 30;
-    const trackInnerRadius = 20;
-    
-    const interval = setInterval(() => {
-      // Calculate movement force
-      const force = Math.sqrt(movement.x * movement.x + movement.z * movement.z);
-      
-      // Update speed based on movement
-      if (force > 0.1) {
-        speedRef.current = Math.min(speedRef.current + acceleration, maxSpeed);
-      } else {
-        speedRef.current = Math.max(speedRef.current - deceleration, 0);
-      }
-      
-      // Calculate new position - negative Z is forward for the car model
-      const moveX = Math.sin(carRotation[1]) * speedRef.current;
-      const moveZ = -Math.cos(carRotation[1]) * speedRef.current;
-      
-      const newX = carPosition[0] + moveX;
-      const newZ = carPosition[2] + moveZ;
-      
-      // Check if new position is within track boundaries
-      const distanceFromCenter = Math.sqrt(newX * newX + newZ * newZ);
-      
-      // Only update position if within track boundaries
-      if (distanceFromCenter < trackOuterRadius - 1 && distanceFromCenter > trackInnerRadius + 1) {
-        setCarPosition([newX, carPosition[1], newZ]);
-      } else {
-        // Collision with wall - stop movement
-        speedRef.current = 0;
-      }
-      
-      // Stop movement if speed is too low
-      if (speedRef.current < 0.01) {
-        setIsMoving(false);
-      }
-    }, 16); // ~60fps
-
-    return () => clearInterval(interval);
-  }, [movement, isMoving, carRotation, carPosition, keyboardControls]);
-
-  // Toggle between first-person and third-person perspectives
-  const togglePerspective = () => {
-    setPerspective(prev => prev === 'first-person' ? 'third-person' : 'first-person');
-  };
-
+  }, [carRotation]);
+  
   return (
     <div className="App">
-      <Scene carPosition={carPosition} carRotation={carRotation} perspective={perspective} />
-      
-      {/* <div className="content">
-        <header>
-          <h1>My Interactive Portfolio</h1>
-          <p>Use the joystick to drive the car around the page</p>
-        </header>
-        
-        <About />
-      </div> */}
-      
-      <button 
-        onClick={togglePerspective}
-        className="perspective-button"
-      >
-        {perspective === 'first-person' ? 'Switch to Third-Person' : 'Switch to First-Person'}
-      </button>
+      <Canvas shadows style={{ height: '100vh' }}>
+        <PerspectiveCamera makeDefault position={[0, 20, 40]} fov={60} />
+        <World />
+        <Car position={carPosition} rotation={carRotation} />
+        <OrbitControls target={[0, 0, 0]} maxPolarAngle={Math.PI / 2.1} />
+      </Canvas>
       
       <div className="controls-info">
-        <p>Keyboard: WASD or Arrow Keys | Joystick: Tap and drag</p>
+        <p>Use WASD or Arrow Keys to drive the car</p>
       </div>
-      
-      <Joystick onMove={handleJoystickMove} onEnd={handleJoystickEnd} />
     </div>
   );
 }
