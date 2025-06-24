@@ -1,206 +1,152 @@
-import React, { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Grid } from '@react-three/drei';
-import { Car } from './Car';
-import * as THREE from 'three';
+import React, { useRef, useEffect, Suspense } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { PerspectiveCamera, Environment } from '@react-three/drei'
+import * as THREE from 'three'
+import { Car } from './Car'
+import { CityWorld } from '../CityWorld'
+import { getWeather, getTimeOfDay } from '../services/weatherService'
 
-// Camera controller component to follow the car
-const CameraController = ({ carPosition, carRotation, perspective }) => {
-  const cameraRef = useRef();
-  
+// Camera that follows the car
+function CameraController({ carRef }) {
+  const cameraRef = useRef()
   useFrame(() => {
-    if (!cameraRef.current) return;
-    
-    // Calculate camera position based on perspective
-    if (perspective === 'first-person') {
-      // First-person: position camera at the front of the car
-      const offset = new THREE.Vector3(0, 1.5, -1);
-      offset.applyEuler(new THREE.Euler(0, carRotation[1], 0));
-      
-      cameraRef.current.position.x = carPosition[0] + offset.x;
-      cameraRef.current.position.y = carPosition[1] + offset.y;
-      cameraRef.current.position.z = carPosition[2] + offset.z;
-      
-      // Look in the direction the car is facing
-      const target = new THREE.Vector3(0, 0, -10);
-      target.applyEuler(new THREE.Euler(0, carRotation[1], 0));
-      target.add(new THREE.Vector3(carPosition[0], carPosition[1], carPosition[2]));
-      
-      cameraRef.current.lookAt(target);
-    } else {
-      // Third-person: position camera behind and above the car
-      const offset = new THREE.Vector3(0, 5, 10);
-      offset.applyEuler(new THREE.Euler(0, carRotation[1], 0));
-      
-      cameraRef.current.position.x = carPosition[0] + offset.x;
-      cameraRef.current.position.y = carPosition[1] + offset.y;
-      cameraRef.current.position.z = carPosition[2] + offset.z;
-      
-      // Look at the car
-      cameraRef.current.lookAt(
-        new THREE.Vector3(carPosition[0], carPosition[1], carPosition[2])
-      );
+    if (carRef.current && cameraRef.current) {
+      const carPos = carRef.current.position
+      const distance = 7
+      const height = 3
+      // Get an offset behind the car based on its rotation
+      const offsetX = Math.sin(carRef.current.rotation.y) * distance
+      const offsetZ = -Math.cos(carRef.current.rotation.y) * distance
+      const targetPosition = new THREE.Vector3(
+        carPos.x + offsetX,
+        carPos.y + height,
+        carPos.z + offsetZ
+      )
+      // Smoothly follow the car
+      cameraRef.current.position.lerp(targetPosition, 0.2)
+      cameraRef.current.lookAt(carPos.x, carPos.y + 1, carPos.z)
     }
-  });
+  })
+  return <PerspectiveCamera ref={cameraRef} makeDefault fov={75} />
+}
+
+// Movement & Rotation logic
+function CarController({ carRef, keysPressed }) {
+  useFrame(() => {
+    if (!carRef.current) return
+    const speed = 0.1
+    const rotationSpeed = 0.03
+
+    // Rotation left/right
+    if (keysPressed.current['a'] || keysPressed.current['arrowleft']) {
+      carRef.current.rotation.y += rotationSpeed
+    }
+    if (keysPressed.current['d'] || keysPressed.current['arrowright']) {
+      carRef.current.rotation.y -= rotationSpeed
+    }
+
+    // Forward/Backward movement
+    if (keysPressed.current['w'] || keysPressed.current['arrowup']) {
+      carRef.current.translateZ(speed) // FORWARD
+    }
+    if (keysPressed.current['s'] || keysPressed.current['arrowdown']) {
+      carRef.current.translateZ(-speed) // BACKWARD
+    }
+  })
+  return null
+}
+
+// Main Scene
+function Scene() {
+  const carRef = useRef()
+  const keysPressed = useRef({})
+
+  const [weatherCondition, setWeatherCondition] = React.useState('clear')
+  const [timeOfDay, setTimeOfDay] = React.useState('afternoon')
+  const [weatherInfo, setWeatherInfo] = React.useState({ temperature: 20, city: 'Mumbai' })
+  const [selectedCity, setSelectedCity] = React.useState('Mumbai')
+
+  useEffect(() => {
+    const fetchWeather = async () => {
+      const data = await getWeather(selectedCity)
+      setWeatherCondition(data.condition)
+      setTimeOfDay(data.timeOfDay)
+      setWeatherInfo({ temperature: data.temperature, city: data.city })
+    }
+    fetchWeather()
+    const weatherInterval = setInterval(fetchWeather, 60000) // Update every 1 minute
+
+    return () => {
+      clearInterval(weatherInterval)
+    }
+  }, [selectedCity])
+
+  // Keyboard listener
+  useEffect(() => {
+    const handleKeyDown = (e) => (keysPressed.current[e.key.toLowerCase()] = true)
+    const handleKeyUp = (e) => (keysPressed.current[e.key.toLowerCase()] = false)
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [])
 
   return (
-    <PerspectiveCamera 
-      ref={cameraRef}
-      makeDefault 
-      position={[0, 5, 10]} 
-      fov={perspective === 'first-person' ? 75 : 45}
-    />
-  );
-};
+    <div style={{ width: '100%', height: '100vh' }}>
+      <Canvas shadows>
+        <CityWorld weatherCondition={weatherCondition} timeOfDay={timeOfDay} />
+        <ambientLight intensity={0.5} />
 
-// Racing track component
-const RaceTrack = () => {
-  // Track parameters
-  const trackWidth = 10;
-  const trackOuterRadius = 30;
-  const trackInnerRadius = 20;
-  const wallHeight = 2;
-  
-  // Create track path points
-  const trackPoints = useMemo(() => {
-    const points = [];
-    const segments = 32;
-    
-    // Outer track wall
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * Math.PI * 2;
-      points.push(
-        new THREE.Vector3(
-          Math.cos(angle) * trackOuterRadius,
-          0,
-          Math.sin(angle) * trackOuterRadius
-        )
-      );
-    }
-    
-    return points;
-  }, []);
-  
-  // Create inner track points
-  const innerTrackPoints = useMemo(() => {
-    const points = [];
-    const segments = 32;
-    
-    // Inner track wall
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * Math.PI * 2;
-      points.push(
-        new THREE.Vector3(
-          Math.cos(angle) * trackInnerRadius,
-          0,
-          Math.sin(angle) * trackInnerRadius
-        )
-      );
-    }
-    
-    return points;
-  }, []);
+        <Suspense fallback={null}>
+          <Car ref={carRef} scale={[0.01, 0.01, 0.01]} />
+          <Environment preset={timeOfDay === 'night' ? 'night' : timeOfDay === 'evening' ? 'sunset' : 'city'} />
+        </Suspense>
 
-  return (
-    <group>
-      {/* Track surface */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.48, 0]} receiveShadow>
-        <ringGeometry args={[trackInnerRadius, trackOuterRadius, 32]} />
-        <meshStandardMaterial color="#333333" />
-      </mesh>
-      
-      {/* Track markings */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.47, 0]}>
-        <ringGeometry args={[trackInnerRadius + 0.1, trackInnerRadius + 0.5, 32]} />
-        <meshStandardMaterial color="white" />
-      </mesh>
-      
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.47, 0]}>
-        <ringGeometry args={[trackOuterRadius - 0.5, trackOuterRadius - 0.1, 32]} />
-        <meshStandardMaterial color="white" />
-      </mesh>
-      
-      {/* Dashed center line */}
-      {Array.from({ length: 16 }).map((_, i) => (
-        <mesh 
-          key={`dash-${i}`}
-          rotation={[-Math.PI / 2, 0, i * Math.PI / 8]} 
-          position={[0, -0.47, 0]}
-        >
-          <planeGeometry args={[1, trackWidth * 0.1]} />
-          <meshStandardMaterial color="white" />
-        </mesh>
-      ))}
-      
-      {/* Outer wall */}
-      <mesh>
-        <tubeGeometry 
-          args={[
-            new THREE.CatmullRomCurve3(trackPoints),
-            64,
-            0.5,
-            8,
-            true
-          ]} 
-        />
-        <meshStandardMaterial color="#777777" />
-      </mesh>
-      
-      {/* Inner wall */}
-      <mesh>
-        <tubeGeometry 
-          args={[
-            new THREE.CatmullRomCurve3(innerTrackPoints),
-            64,
-            0.5,
-            8,
-            true
-          ]} 
-        />
-        <meshStandardMaterial color="#777777" />
-      </mesh>
-    </group>
-  );
-};
+        <CameraController carRef={carRef} />
+        <CarController carRef={carRef} keysPressed={keysPressed} />
+      </Canvas>
 
-const Scene = ({ carPosition, carRotation, perspective = 'third-person' }) => {
-  return (
-    <Canvas style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: -1 }}>
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[10, 10, 5]} intensity={1} />
-      <CameraController 
-        carPosition={carPosition} 
-        carRotation={carRotation} 
-        perspective={perspective} 
-      />
-      <Car position={carPosition} rotation={carRotation} />
-      
-      {/* Ground with grid */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
-        <planeGeometry args={[100, 100]} />
-        <meshStandardMaterial color="#505050" />
-      </mesh>
-      
-      {/* Grid helper */}
-      <Grid 
-        position={[0, -0.49, 0]}
-        args={[100, 100]} 
-        cellSize={5}
-        cellThickness={0.6}
-        cellColor="#808080"
-        sectionSize={20}
-        sectionThickness={1.2}
-        sectionColor="#A0A0A0"
-        fadeDistance={100}
-        infiniteGrid={true}
-      />
-      
-      {/* Racing track */}
-      <RaceTrack />
-      
-      <OrbitControls enabled={false} />
-    </Canvas>
-  );
-};
+      <div
+        className="weather-info"
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          background: 'rgba(0,0,0,0.5)',
+          color: 'white',
+          padding: '10px',
+          borderRadius: '5px'
+        }}
+      >
+        <p>{weatherInfo.city}: {weatherInfo.temperature}°C</p>
+        <p>Weather: {weatherCondition}</p>
+        <p>Time: {timeOfDay}</p>
+        <div style={{ marginTop: '10px' }}>
+          <select 
+            value={selectedCity}
+            onChange={(e) => setSelectedCity(e.target.value)}
+            style={{
+              background: 'rgba(255,255,255,0.8)',
+              padding: '5px',
+              borderRadius: '3px',
+              border: 'none'
+            }}
+          >
+            <option value="Mumbai">Mumbai</option>
+            <option value="New York">New York</option>
+            <option value="London">London</option>
+            <option value="Tokyo">Tokyo</option>
+            <option value="Sydney">Sydney</option>
+            <option value="Paris">Paris</option>
+            <option value="Dubai">Dubai</option>
+            <option value="Singapore">Singapore</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  )
+}
 
-export default Scene;
+export default Scene
