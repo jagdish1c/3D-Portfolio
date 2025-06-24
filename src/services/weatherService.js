@@ -37,24 +37,45 @@ export const getWeather = async (city = DEFAULT_CITY) => {
       condition = 'cloudy';
     }
     
+    // Calculate local time for the city using timezone offset
+    const timezoneOffset = data.timezone; // seconds from UTC
+    const utcTime = new Date().getTime() + (new Date().getTimezoneOffset() * 60000);
+    const cityTime = new Date(utcTime + (timezoneOffset * 1000));
+    const hour = cityTime.getHours();
+    
+    let timeOfDay;
+    if (hour >= 5 && hour < 10) {
+      timeOfDay = 'morning';
+    } else if (hour >= 10 && hour < 17) {
+      timeOfDay = 'afternoon';
+    } else if (hour >= 17 && hour < 21) {
+      timeOfDay = 'evening';
+    } else {
+      timeOfDay = 'night';
+    }
+    
     return {
       condition,
       temperature: Math.round(data.main.temp - 273.15), // Convert from Kelvin to Celsius
-      city: data.name
+      city: data.name,
+      timeOfDay
     };
   } catch (error) {
     console.error('Error fetching weather data:', error);
     return {
       condition: 'clear',
       temperature: 20,
-      city: DEFAULT_CITY
+      city: DEFAULT_CITY,
+      timeOfDay: 'afternoon'
     };
   }
 };
 
-// Get time of day based on current hour
-export const getTimeOfDay = () => {
-  const hour = new Date().getHours();
+// Get time of day based on city timezone (deprecated - now handled in getWeather)
+export const getTimeOfDay = (timezoneOffset = 0) => {
+  const utcTime = new Date().getTime() + (new Date().getTimezoneOffset() * 60000);
+  const cityTime = new Date(utcTime + (timezoneOffset * 1000));
+  const hour = cityTime.getHours();
   
   if (hour >= 5 && hour < 10) {
     return 'morning';

@@ -67,20 +67,16 @@ function Scene() {
   const [selectedCity, setSelectedCity] = React.useState('Mumbai')
 
   useEffect(() => {
-    const currentTimeOfDay = getTimeOfDay()
-    setTimeOfDay(currentTimeOfDay)
-
-    const timeInterval = setInterval(() => setTimeOfDay(getTimeOfDay()), 60000)
     const fetchWeather = async () => {
       const data = await getWeather(selectedCity)
       setWeatherCondition(data.condition)
+      setTimeOfDay(data.timeOfDay)
       setWeatherInfo({ temperature: data.temperature, city: data.city })
     }
     fetchWeather()
-    const weatherInterval = setInterval(fetchWeather, 1800000)
+    const weatherInterval = setInterval(fetchWeather, 60000) // Update every 1 minute
 
     return () => {
-      clearInterval(timeInterval)
       clearInterval(weatherInterval)
     }
   }, [selectedCity])
