@@ -17,8 +17,8 @@ function CameraController({ carRef, cameraMode }) {
       const carRotation = carRef.current.rotation.y
       
       if (cameraMode === 'FPP') {
-        // First Person - camera inside the car
-        const fpOffset = new THREE.Vector3(0, 1.5, 0.5)
+        // First Person - camera behind windshield (driver's seat)
+        const fpOffset = new THREE.Vector3(0, 0.8, -0.3)
         fpOffset.applyEuler(new THREE.Euler(0, carRotation, 0))
         const targetPosition = new THREE.Vector3(
           carPos.x + fpOffset.x,
@@ -27,10 +27,10 @@ function CameraController({ carRef, cameraMode }) {
         )
         cameraRef.current.position.lerp(targetPosition, 0.3)
         
-        // Look forward from car's perspective
+        // Look forward from driver's perspective
         const lookAtX = carPos.x - Math.sin(carRotation) * 10
         const lookAtZ = carPos.z + Math.cos(carRotation) * 10
-        cameraRef.current.lookAt(lookAtX, carPos.y + 1, lookAtZ)
+        cameraRef.current.lookAt(lookAtX, carPos.y + 0.8, lookAtZ)
       } else {
         // Third Person - camera behind the car
         const distance = 7
