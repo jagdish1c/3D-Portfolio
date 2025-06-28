@@ -2,65 +2,33 @@ import React, { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { useGLTF, useTexture } from '@react-three/drei';
 
-// Glass Skyscraper with detailed structure
+// Glass Skyscraper with texture
 const GlassSkyscraper = ({ position, scale = [1, 1, 1], rotation = [0, 0, 0] }) => {
   return (
     <group position={position} rotation={rotation}>
-      {/* Main building structure */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[scale[0], scale[1], scale[2]]} />
-        <meshStandardMaterial 
-          color="#87CEEB" 
-          metalness={0.9} 
-          roughness={0.1} 
-          transparent={true} 
-          opacity={0.8}
-        />
+        <meshStandardMaterial color="#87CEEB" metalness={0.9} roughness={0.1} transparent opacity={0.8} />
       </mesh>
-      {/* Window grid on all 4 sides */}
-      {[0, 1, 2, 3].map(side => (
-        <group key={side} rotation={[0, side * Math.PI / 2, 0]}>
-          {Array.from({ length: Math.floor(scale[1] / 3) }, (_, i) => (
-            <mesh key={i} position={[0, -scale[1]/2 + i * 3 + 1.5, scale[2]/2 + 0.01]}>
-              <planeGeometry args={[scale[0] * 0.9, 2]} />
-              <meshStandardMaterial color="#1e3a8a" transparent={true} opacity={0.6} />
-            </mesh>
-          ))}
-        </group>
-      ))}
-      {/* Building top */}
-      <mesh position={[0, scale[1]/2 + 0.5, 0]} castShadow>
-        <boxGeometry args={[scale[0] * 0.8, 1, scale[2] * 0.8]} />
-        <meshStandardMaterial color="#2c3e50" />
+      <mesh position={[0, 0, scale[2]/2 + 0.01]}>
+        <planeGeometry args={[scale[0] * 0.9, scale[1] * 0.9]} />
+        <meshStandardMaterial color="#1e3a8a" transparent opacity={0.6} />
       </mesh>
     </group>
   );
 };
 
-// Modern Office Building with detailed structure
+// Office Building with windows
 const OfficeBuilding = ({ position, scale = [1, 1, 1], rotation = [0, 0, 0] }) => {
   return (
     <group position={position} rotation={rotation}>
-      {/* Main structure */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[scale[0], scale[1], scale[2]]} />
         <meshStandardMaterial color="#6c757d" roughness={0.8} />
       </mesh>
-      {/* Window strips on all sides */}
-      {[0, 1, 2, 3].map(side => (
-        <group key={side} rotation={[0, side * Math.PI / 2, 0]}>
-          {Array.from({ length: Math.floor(scale[1] / 4) }, (_, i) => (
-            <mesh key={i} position={[0, -scale[1]/2 + i * 4 + 2, scale[2]/2 + 0.01]}>
-              <planeGeometry args={[scale[0] * 0.8, 3]} />
-              <meshStandardMaterial color="#1a1a2e" transparent={true} opacity={0.7} />
-            </mesh>
-          ))}
-        </group>
-      ))}
-      {/* Building entrance */}
-      <mesh position={[0, -scale[1]/2 + 2, scale[2]/2 + 0.1]} castShadow>
-        <boxGeometry args={[scale[0] * 0.3, 4, 0.5]} />
-        <meshStandardMaterial color="#34495e" />
+      <mesh position={[0, 0, scale[2]/2 + 0.01]}>
+        <planeGeometry args={[scale[0] * 0.8, scale[1] * 0.7]} />
+        <meshStandardMaterial color="#1a1a2e" transparent opacity={0.8} />
       </mesh>
     </group>
   );
@@ -131,85 +99,55 @@ const StopSign = ({ position }) => {
   );
 };
 
-// 2-Lane Road Network with textures
+// Single Straight Road
 const RoadNetwork = () => {
-  const roads = [];
-  
-  // Main horizontal road with 2 lanes
-  roads.push(
-    <group key="main-h">
+  return (
+    <group key="single-road">
       {/* Road base */}
       <mesh position={[0, 0, 0]} receiveShadow>
-        <boxGeometry args={[200, 0.1, 12]} />
+        <boxGeometry args={[300, 0.1, 12]} />
         <meshStandardMaterial color="#2c2c2c" roughness={0.9} />
       </mesh>
       {/* Lane divider */}
       <mesh position={[0, 0.01, 0]}>
-        <boxGeometry args={[200, 0.01, 0.2]} />
+        <boxGeometry args={[300, 0.01, 0.2]} />
         <meshStandardMaterial color="#ffff00" />
       </mesh>
       {/* Side lines */}
       <mesh position={[0, 0.01, 5.8]}>
-        <boxGeometry args={[200, 0.01, 0.2]} />
+        <boxGeometry args={[300, 0.01, 0.2]} />
         <meshStandardMaterial color="#ffffff" />
       </mesh>
       <mesh position={[0, 0.01, -5.8]}>
-        <boxGeometry args={[200, 0.01, 0.2]} />
+        <boxGeometry args={[300, 0.01, 0.2]} />
         <meshStandardMaterial color="#ffffff" />
       </mesh>
     </group>
   );
-  
-  // Main vertical road with 2 lanes
-  roads.push(
-    <group key="main-v">
-      {/* Road base */}
-      <mesh position={[0, 0, 0]} receiveShadow>
-        <boxGeometry args={[12, 0.1, 200]} />
-        <meshStandardMaterial color="#2c2c2c" roughness={0.9} />
-      </mesh>
-      {/* Lane divider */}
-      <mesh position={[0, 0.01, 0]}>
-        <boxGeometry args={[0.2, 0.01, 200]} />
-        <meshStandardMaterial color="#ffff00" />
-      </mesh>
-      {/* Side lines */}
-      <mesh position={[5.8, 0.01, 0]}>
-        <boxGeometry args={[0.2, 0.01, 200]} />
-        <meshStandardMaterial color="#ffffff" />
-      </mesh>
-      <mesh position={[-5.8, 0.01, 0]}>
-        <boxGeometry args={[0.2, 0.01, 200]} />
-        <meshStandardMaterial color="#ffffff" />
-      </mesh>
-    </group>
-  );
-  
-  return <>{roads}</>;
 };
 
 export function CityWorld({ weatherCondition, timeOfDay }) {
-  // Generate dense city with no empty spaces
+  // Buildings spread across 3D plane with single straight road
   const buildings = [];
   const buildingTypes = [GlassSkyscraper, OfficeBuilding, ResidentialBuilding];
   
-  // Fill entire area with buildings except roads
-  for (let x = -15; x <= 15; x++) {
-    for (let z = -15; z <= 15; z++) {
-      // Skip road areas (cross pattern)
-      if ((Math.abs(x) < 1 && Math.abs(z) < 8) || (Math.abs(z) < 1 && Math.abs(x) < 8)) continue;
+  // Create city grid across entire 3D plane
+  for (let x = -12; x <= 12; x++) {
+    for (let z = -12; z <= 12; z++) {
+      // Skip road area (horizontal road at z = 0)
+      if (Math.abs(z) < 1) continue;
       
       const BuildingType = buildingTypes[Math.floor(Math.random() * buildingTypes.length)];
       const scale = [
-        4 + Math.random() * 3,
-        12 + Math.random() * 30, // Varied heights
-        4 + Math.random() * 3
+        3 + Math.random() * 3,
+        10 + Math.random() * 25,
+        3 + Math.random() * 3
       ];
       
       const position = [
-        x * 8 + (Math.random() - 0.5) * 2,
-        scale[1] / 2, // Position above ground
-        z * 8 + (Math.random() - 0.5) * 2
+        x * 12 + (Math.random() - 0.5) * 4,
+        scale[1] / 2,
+        z * 12 + (Math.random() - 0.5) * 4
       ];
       
       buildings.push(
@@ -223,33 +161,17 @@ export function CityWorld({ weatherCondition, timeOfDay }) {
     }
   }
   
-  // Add extra tall buildings in corners
-  const cornerPositions = [[-80, -80], [80, -80], [-80, 80], [80, 80]];
-  cornerPositions.forEach((pos, i) => {
-    const scale = [6, 50 + Math.random() * 20, 6];
-    buildings.push(
-      <GlassSkyscraper 
-        key={`corner-${i}`} 
-        position={[pos[0], scale[1] / 2, pos[1]]} 
-        scale={scale} 
-        rotation={[0, Math.random() * Math.PI * 2, 0]}
-      />
-    );
-  });
+  // Traffic elements along the single road
+  const trafficLights = [
+    <TrafficLight key="traffic-1" position={[-50, 0, 8]} />,
+    <TrafficLight key="traffic-2" position={[0, 0, 8]} />,
+    <TrafficLight key="traffic-3" position={[50, 0, 8]} />
+  ];
   
-  // Add traffic lights and stop signs
-  const trafficLights = [];
-  const stopSigns = [];
-  
-  for (let i = 0; i < 5; i++) {
-    const position = [-6, 0, -60 + i * 30];
-    trafficLights.push(<TrafficLight key={`traffic-${i}`} position={position} />);
-  }
-  
-  for (let i = 0; i < 3; i++) {
-    const position = [6, 0, -40 + i * 40];
-    stopSigns.push(<StopSign key={`stop-${i}`} position={position} />);
-  }
+  const stopSigns = [
+    <StopSign key="stop-1" position={[-30, 0, -8]} />,
+    <StopSign key="stop-2" position={[30, 0, -8]} />
+  ];
   
   // Set lighting based on time of day
   let skyColor, lightIntensity, lightPosition, fogColor, fogDensity;
