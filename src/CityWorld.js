@@ -1,18 +1,77 @@
 import React, { useEffect, useState } from 'react';
 import * as THREE from 'three';
-import { useGLTF } from '@react-three/drei';
+import { useGLTF, useTexture } from '@react-three/drei';
 
-// City building component
-const Building = ({ position, scale = [1, 1, 1], rotation = [0, 0, 0] }) => {
-  // Simple building using a box
+// Glass Skyscraper with detailed structure
+const GlassSkyscraper = ({ position, scale = [1, 1, 1], rotation = [0, 0, 0] }) => {
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Main building structure */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[scale[0], scale[1], scale[2]]} />
+        <meshStandardMaterial 
+          color="#87CEEB" 
+          metalness={0.9} 
+          roughness={0.1} 
+          transparent={true} 
+          opacity={0.8}
+        />
+      </mesh>
+      {/* Window grid on all 4 sides */}
+      {[0, 1, 2, 3].map(side => (
+        <group key={side} rotation={[0, side * Math.PI / 2, 0]}>
+          {Array.from({ length: Math.floor(scale[1] / 3) }, (_, i) => (
+            <mesh key={i} position={[0, -scale[1]/2 + i * 3 + 1.5, scale[2]/2 + 0.01]}>
+              <planeGeometry args={[scale[0] * 0.9, 2]} />
+              <meshStandardMaterial color="#1e3a8a" transparent={true} opacity={0.6} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+      {/* Building top */}
+      <mesh position={[0, scale[1]/2 + 0.5, 0]} castShadow>
+        <boxGeometry args={[scale[0] * 0.8, 1, scale[2] * 0.8]} />
+        <meshStandardMaterial color="#2c3e50" />
+      </mesh>
+    </group>
+  );
+};
+
+// Modern Office Building with detailed structure
+const OfficeBuilding = ({ position, scale = [1, 1, 1], rotation = [0, 0, 0] }) => {
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Main structure */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[scale[0], scale[1], scale[2]]} />
+        <meshStandardMaterial color="#6c757d" roughness={0.8} />
+      </mesh>
+      {/* Window strips on all sides */}
+      {[0, 1, 2, 3].map(side => (
+        <group key={side} rotation={[0, side * Math.PI / 2, 0]}>
+          {Array.from({ length: Math.floor(scale[1] / 4) }, (_, i) => (
+            <mesh key={i} position={[0, -scale[1]/2 + i * 4 + 2, scale[2]/2 + 0.01]}>
+              <planeGeometry args={[scale[0] * 0.8, 3]} />
+              <meshStandardMaterial color="#1a1a2e" transparent={true} opacity={0.7} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+      {/* Building entrance */}
+      <mesh position={[0, -scale[1]/2 + 2, scale[2]/2 + 0.1]} castShadow>
+        <boxGeometry args={[scale[0] * 0.3, 4, 0.5]} />
+        <meshStandardMaterial color="#34495e" />
+      </mesh>
+    </group>
+  );
+};
+
+// Residential Building
+const ResidentialBuilding = ({ position, scale = [1, 1, 1], rotation = [0, 0, 0] }) => {
   return (
     <mesh position={position} rotation={rotation} castShadow receiveShadow>
       <boxGeometry args={[scale[0], scale[1], scale[2]]} />
-      <meshStandardMaterial color="#8c8c8c" />
-      <mesh position={[0, scale[1]/2 + 0.1, 0]}>
-        <boxGeometry args={[scale[0] * 0.8, scale[1] * 0.2, scale[2] * 0.8]} />
-        <meshStandardMaterial color="#6e6e6e" />
-      </mesh>
+      <meshStandardMaterial color="#8b4513" roughness={0.9} />
     </mesh>
   );
 };
@@ -72,53 +131,123 @@ const StopSign = ({ position }) => {
   );
 };
 
-// Road component
-const Road = ({ position, length, rotation = [0, 0, 0] }) => {
-  return (
-    <mesh position={position} rotation={rotation} receiveShadow>
-      <boxGeometry args={[10, 0.1, length]} />
-      <meshStandardMaterial color="#333333" />
+// 2-Lane Road Network with textures
+const RoadNetwork = () => {
+  const roads = [];
+  
+  // Main horizontal road with 2 lanes
+  roads.push(
+    <group key="main-h">
+      {/* Road base */}
+      <mesh position={[0, 0, 0]} receiveShadow>
+        <boxGeometry args={[200, 0.1, 12]} />
+        <meshStandardMaterial color="#2c2c2c" roughness={0.9} />
+      </mesh>
+      {/* Lane divider */}
       <mesh position={[0, 0.01, 0]}>
-        <boxGeometry args={[0.3, 0.01, length]} />
+        <boxGeometry args={[200, 0.01, 0.2]} />
+        <meshStandardMaterial color="#ffff00" />
+      </mesh>
+      {/* Side lines */}
+      <mesh position={[0, 0.01, 5.8]}>
+        <boxGeometry args={[200, 0.01, 0.2]} />
         <meshStandardMaterial color="#ffffff" />
       </mesh>
-    </mesh>
+      <mesh position={[0, 0.01, -5.8]}>
+        <boxGeometry args={[200, 0.01, 0.2]} />
+        <meshStandardMaterial color="#ffffff" />
+      </mesh>
+    </group>
   );
+  
+  // Main vertical road with 2 lanes
+  roads.push(
+    <group key="main-v">
+      {/* Road base */}
+      <mesh position={[0, 0, 0]} receiveShadow>
+        <boxGeometry args={[12, 0.1, 200]} />
+        <meshStandardMaterial color="#2c2c2c" roughness={0.9} />
+      </mesh>
+      {/* Lane divider */}
+      <mesh position={[0, 0.01, 0]}>
+        <boxGeometry args={[0.2, 0.01, 200]} />
+        <meshStandardMaterial color="#ffff00" />
+      </mesh>
+      {/* Side lines */}
+      <mesh position={[5.8, 0.01, 0]}>
+        <boxGeometry args={[0.2, 0.01, 200]} />
+        <meshStandardMaterial color="#ffffff" />
+      </mesh>
+      <mesh position={[-5.8, 0.01, 0]}>
+        <boxGeometry args={[0.2, 0.01, 200]} />
+        <meshStandardMaterial color="#ffffff" />
+      </mesh>
+    </group>
+  );
+  
+  return <>{roads}</>;
 };
 
 export function CityWorld({ weatherCondition, timeOfDay }) {
-  // Generate random buildings along the road
+  // Generate dense city with no empty spaces
   const buildings = [];
-  const roadLength = 200;
-  const buildingCount = 20;
+  const buildingTypes = [GlassSkyscraper, OfficeBuilding, ResidentialBuilding];
   
-  // Create buildings on both sides of the road
-  for (let i = 0; i < buildingCount; i++) {
-    // Left side buildings
-    const leftPosition = [-7, 2 + Math.random() * 5, -roadLength/2 + i * (roadLength/buildingCount)];
-    const leftScale = [3 + Math.random() * 2, 4 + Math.random() * 10, 3 + Math.random() * 2];
-    
-    // Right side buildings
-    const rightPosition = [7, 2 + Math.random() * 5, -roadLength/2 + i * (roadLength/buildingCount)];
-    const rightScale = [3 + Math.random() * 2, 4 + Math.random() * 10, 3 + Math.random() * 2];
-    
-    buildings.push(
-      <Building key={`left-${i}`} position={leftPosition} scale={leftScale} />,
-      <Building key={`right-${i}`} position={rightPosition} scale={rightScale} />
-    );
+  // Fill entire area with buildings except roads
+  for (let x = -15; x <= 15; x++) {
+    for (let z = -15; z <= 15; z++) {
+      // Skip road areas (cross pattern)
+      if ((Math.abs(x) < 1 && Math.abs(z) < 8) || (Math.abs(z) < 1 && Math.abs(x) < 8)) continue;
+      
+      const BuildingType = buildingTypes[Math.floor(Math.random() * buildingTypes.length)];
+      const scale = [
+        4 + Math.random() * 3,
+        12 + Math.random() * 30, // Varied heights
+        4 + Math.random() * 3
+      ];
+      
+      const position = [
+        x * 8 + (Math.random() - 0.5) * 2,
+        scale[1] / 2, // Position above ground
+        z * 8 + (Math.random() - 0.5) * 2
+      ];
+      
+      buildings.push(
+        <BuildingType 
+          key={`building-${x}-${z}`} 
+          position={position} 
+          scale={scale} 
+          rotation={[0, Math.random() * Math.PI * 2, 0]}
+        />
+      );
+    }
   }
+  
+  // Add extra tall buildings in corners
+  const cornerPositions = [[-80, -80], [80, -80], [-80, 80], [80, 80]];
+  cornerPositions.forEach((pos, i) => {
+    const scale = [6, 50 + Math.random() * 20, 6];
+    buildings.push(
+      <GlassSkyscraper 
+        key={`corner-${i}`} 
+        position={[pos[0], scale[1] / 2, pos[1]]} 
+        scale={scale} 
+        rotation={[0, Math.random() * Math.PI * 2, 0]}
+      />
+    );
+  });
   
   // Add traffic lights and stop signs
   const trafficLights = [];
   const stopSigns = [];
   
   for (let i = 0; i < 5; i++) {
-    const position = [-4, 0, -roadLength/2 + (i+1) * (roadLength/6)];
+    const position = [-6, 0, -60 + i * 30];
     trafficLights.push(<TrafficLight key={`traffic-${i}`} position={position} />);
   }
   
   for (let i = 0; i < 3; i++) {
-    const position = [4, 0, -roadLength/2 + (i+1) * (roadLength/4)];
+    const position = [6, 0, -40 + i * 40];
     stopSigns.push(<StopSign key={`stop-${i}`} position={position} />);
   }
   
@@ -207,16 +336,16 @@ export function CityWorld({ weatherCondition, timeOfDay }) {
         shadow-mapSize-height={1024} 
       />
       
-      {/* Ground */}
+      {/* Ground with concrete texture */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
-        <planeGeometry args={[200, 200]} />
-        <meshStandardMaterial color="#4b5320" />
+        <planeGeometry args={[300, 300]} />
+        <meshStandardMaterial color="#3a3a3a" roughness={0.9} />
       </mesh>
       
-      {/* Road */}
-      <Road position={[0, 0, 0]} length={roadLength} />
+      {/* Road Network */}
+      <RoadNetwork />
       
-      {/* Buildings */}
+      {/* Textured 3D City */}
       {buildings}
       
       {/* Traffic lights and stop signs */}
