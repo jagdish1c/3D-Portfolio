@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { Car } from './Car'
 import { CityWorld } from '../CityWorld'
 import { getWeather, getTimeOfDay } from '../services/weatherService'
+import Joystick from './Joystick'
 
 // Camera that follows the car
 function CameraController({ carRef }) {
@@ -31,26 +32,37 @@ function CameraController({ carRef }) {
 }
 
 // Movement & Rotation logic
-function CarController({ carRef, keysPressed }) {
+function CarController({ carRef, keysPressed, joystickData }) {
   useFrame(() => {
     if (!carRef.current) return
-    const speed = 0.1
+    const speed = 0.3
     const rotationSpeed = 0.03
 
-    // Rotation left/right
+    // Keyboard controls
     if (keysPressed.current['a'] || keysPressed.current['arrowleft']) {
       carRef.current.rotation.y += rotationSpeed
     }
     if (keysPressed.current['d'] || keysPressed.current['arrowright']) {
       carRef.current.rotation.y -= rotationSpeed
     }
-
-    // Forward/Backward movement
     if (keysPressed.current['w'] || keysPressed.current['arrowup']) {
-      carRef.current.translateZ(speed) // FORWARD
+      carRef.current.translateZ(speed)
     }
     if (keysPressed.current['s'] || keysPressed.current['arrowdown']) {
-      carRef.current.translateZ(-speed) // BACKWARD
+      carRef.current.translateZ(-speed)
+    }
+
+    // Joystick controls
+    if (joystickData.current) {
+      const { angle, distance } = joystickData.current
+      const normalizedDistance = Math.min(distance / 50, 1)
+      
+      // Convert angle to rotation (angle is in radians)
+      const targetRotation = -angle.radian + Math.PI / 2
+      carRef.current.rotation.y = targetRotation
+      
+      // Move forward based on distance
+      carRef.current.translateZ(speed * normalizedDistance)
     }
   })
   return null
@@ -60,6 +72,7 @@ function CarController({ carRef, keysPressed }) {
 function Scene() {
   const carRef = useRef()
   const keysPressed = useRef({})
+  const joystickData = useRef(null)
 
   const [weatherCondition, setWeatherCondition] = React.useState('clear')
   const [timeOfDay, setTimeOfDay] = React.useState('afternoon')
@@ -105,7 +118,7 @@ function Scene() {
         </Suspense>
 
         <CameraController carRef={carRef} />
-        <CarController carRef={carRef} keysPressed={keysPressed} />
+        <CarController carRef={carRef} keysPressed={keysPressed} joystickData={joystickData} />
       </Canvas>
 
       <div
@@ -145,6 +158,15 @@ function Scene() {
           </select>
         </div>
       </div>
+      
+      <Joystick 
+        onMove={(data) => {
+          joystickData.current = data
+        }}
+        onEnd={() => {
+          joystickData.current = null
+        }}
+      />
     </div>
   )
 }
